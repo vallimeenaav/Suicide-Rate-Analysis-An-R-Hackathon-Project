@@ -1,0 +1,825 @@
+---
+title: "HACKATHON - SUICIDE RATE ANALYSIS"
+author: "Group 22 - Yishtavi Gedipudi - 002778249, Surya Pratap Singh - 002711807, Valli Meenaa
+  - 002783394"
+date: "2023-02-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(fig.width = 7, fig.height = 4)
+```
+
+
+
+```{r libraries, echo=FALSE}
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(tidyr)
+library(magrittr)
+library(stringr)
+library(gridExtra)
+library(ggplot2)
+library(corrplot)
+library(reshape2)
+library(RColorBrewer)
+library(readr)
+library(corrr)
+library(ggalluvial)
+library(treemapify)
+library(plotly)
+library(ggpubr)
+library(gganimate)
+library(ggmap)
+library(leaflet)
+library(maps)
+library(mapdata)
+library(treemap)
+library(dygraphs)
+library(xts)
+```
+
+
+# CONTENTS
+### 1. Original Dataset Preview
+### 2. Preview after Data Cleaing and Preprocessing
+### 3. Introduction and Problem Statement
+### 4. Section 1 - Demographic Analysis Visualizations
+### 5. Section 2 - Economic AnalysisVisualization
+### 6. Correlated Analysis
+### 7. Conclusion
+### 8. References
+
+
+# INTRODUCTION AND PROBLEM SATATEMENT
+
+Suicide is a major public health issue that has affected communities all over the world. Despite technological and medical advances, the number of suicides has steadily increased, making it one of the leading causes of death worldwide. With over 800,000 suicides recorded each year, we must understand the underlying causes of this phenomenon and take action to reduce its occurrence.
+
+Depression is frequently cited as one of the leading causes of suicide, but it is not the only one. Suicide rates are increasing across all age groups, genders, and generations, indicating a complicated and multifaceted problem. To gain a better understanding of suicide and its contributing factors, data from various countries must be analyzed and compared using various parameters such as GDP per year, GDP per capita, total population, gender, and more.
+
+This dataset provides a comprehensive overview of suicide rates in various countries and a rich source of information for analyzing trends and patterns related to this issue. The dataset contains 12 distinct columns that contain data such as the country, year, gender, age, total number of suicides, total population, country-year, GDP per year, HDI for the year, GDP per capita, and generation. With such a large dataset, we can delve deeper into the problem and gain valuable insights into the factors that are causing suicides.
+
+We can better understand the "Suicide Rates Overview 1985 to 2016" for different countries, age groups, and years.
+The study and report have been divided into three distinct sections that are highlighted. 
+The opening part talks about "Demographics in terms of Suicide". Additionally, section 2 discusses "Economic Analysis based on Suicide Cases", and the final part highlights "Correlated Analysis"
+
+This analysis will shed light on the patterns and trends in suicide rates across different countries and demographics, providing valuable insights into the complex issue of suicide.
+
+
+
+
+
+## Original Data Preview
+
+```{r original data, echo=FALSE}
+original_data <- read.csv('/Users/yishtavigedipudi/Documents/CompViz/Hackathon1_IE6600_Sec1_Group22_YishtaviGedipudi_SuryaPratapSingh_ValliMeenaa/master.csv', header=T, na.strings = "")
+head(original_data)
+
+```
+
+
+## Preview after Data Cleaning and Preprocessing 
+
+```{r Data Preprocessing, echo=FALSE}
+
+Suicide_rates <- original_data
+
+#Data Processing
+#Changing column names for better understanding
+colnames(Suicide_rates) <- c("Country", "Year", "Gender", "Age", "Number_of_Suicides", "Population", "Suicide_Rate", "Country_Year", "HDI_per_Year", "GDP_per_Year", "GDP_per_Capita", "Generation")
+
+#Removing the',' from thr GDP_per_Year column values for easier access
+Suicide_rates$GDP_per_Year <- as.numeric(gsub(",", "", Suicide_rates$GDP_per_Year))
+
+# Formatting the Age column values
+Suicide_rates <- mutate(Suicide_rates, Age = gsub("5-14 years", "05-14 years", Age))
+
+# Deleting the Country_Year column since we hace 2 other column determining the same
+Suicide_rates <- select(Suicide_rates, -Country_Year)
+
+
+head(Suicide_rates)
+```
+
+## Section 1: Demographic Analysis Visualizations
+
+In this section, we will examine the suicide rate in relation to various demographic factors such as Age, Gender, Country, Year, Generation and Population. We can create charts or plots using advanvced visualization techniques to compare the suicide rate with each demographic, which will allow us to see any patterns or differences in the data. This will help us understand how these factors influence the suicide rate and identify any demographics that may require targeted interventions. We have divided this section to address multiple questions to draw conclusions based on each visualization.
+
+
+### 1. Which year saw the highest number of suicides?
+
+```{r SECTION 1 Question 1, echo=FALSE}
+# Group the data by Year and calculate the mean of the Suicide_Rate column
+Suicides_by_Year <- Suicide_rates %>%
+  group_by(Year) %>% 
+  summarise(Total_Suicides = sum(Number_of_Suicides, na.rm = TRUE))
+#year_format <- as.Date(as.character(year_column), format = "%Y")
+Suicides_by_Year$Year <- as.Date(as.character(Suicides_by_Year$Year), format = "%Y")
+don <- xts(x = Suicides_by_Year$Total_Suicides, order.by = Suicides_by_Year$Year)
+dygraph(don, main = "Total Number of Suicides by Year") %>%
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.5, drawGrid = FALSE, colors="#8073ac") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 10, highlightSeriesBackgroundAlpha = 1.75, hideOnMouseOut = FALSE)  %>%
+  dyRoller(rollPeriod = 1) %>%
+  dyAxis("x", label = "Year") %>%
+  dyAxis("y", label = "Number of Suicides") %>%
+  dyLegend(show = "follow", hideOnMouseOut = FALSE)
+```
+
+In 1999 and 2003, the highest number of suicides were recorded, with a total count of 256119 and 256079, respectively. The number of suicides increased every year from 1985 to 1996 and again from 1997, with a brief decrease in 1997. Further analysis is needed to understand the gender breakdown of these suicide cases.
+
+
+### 2. How does age impact the number of suicides on a yearly basis?
+
+```{r SECTION 1 Question 2, echo=FALSE}
+df_age <- Suicide_rates %>%
+  group_by(Year, Age) %>% summarise(suicides = sum(Number_of_Suicides),
+                                                  Population = sum(Population))
+df_reset <- df_age %>% select(-group_cols()) %>% ungroup()
+
+ggplotly(
+ggplot(df_reset, aes(x = Year, y = suicides, color = Age)) +
+geom_point() + geom_line() +
+scale_x_continuous(name = "Year") +
+scale_y_continuous(name = "Suicides per 100,000 people") +
+labs(title = "<b>Number of Suicides by Age on a Yearly Basis</b>") +
+theme_classic() +
+scale_color_manual(values = c("#e08214", "#fdb863", "#fee0b6", "#b2abd2", "#8073ac", "#542788")) +
+theme(legend.position = "bottom") +
+theme(axis.text.x = element_text(angle = 90, hjust = 1))
+)
+```
+The highest rate of suicides appears to occur in the age group of 35-54 years.
+
+
+
+### 3. What is the breakdown of suicides and their rates by gender and age group?
+
+```{r SECTION 1 Question 3, echo=FALSE}
+#library(ggplot2)
+#library(plotly)
+suicides_by_gender_year <- Suicide_rates %>%
+  group_by(Gender, Year) %>%
+  summarise(no_of_suicides = sum(Number_of_Suicides))
+# Plot the bar plot
+p <- ggplot(suicides_by_gender_year, aes(x=Year, y= no_of_suicides, fill=Gender)) +
+  geom_bar(stat="identity", position="dodge") +
+  scale_x_continuous(name = "Year") +
+  scale_y_continuous(name = "Number of Suicides") +
+  labs(title = "<b>Number of Suicides by Gender on Yearly Basis</b>") +
+  theme_classic() +
+  scale_fill_manual(values=c("#fdb863", "#8073ac"), name="Gender", labels=c("Female", "Male"))
+# Convert the ggplot object to a Plotly plot
+ggplotly(p)
+
+
+
+
+
+suicides_by_gender <- Suicide_rates %>%
+  group_by(Gender, Age) %>%
+  summarise(suicide_rate = mean(Suicide_Rate))
+
+male_suicides <- suicides_by_gender %>%
+  filter(Gender == "male")
+
+female_suicides <- suicides_by_gender %>%
+  filter(Gender == "female")
+
+
+p1 <- ggplot(male_suicides, aes(x = Age, y = suicide_rate, fill = Age)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("#e08214", "#fdb863", "#fee0b6", "#b2abd2", "#8073ac", "#542788")) +
+  xlab("Age") + ylab("Male Suicide Rate") +
+  ggtitle("<b>Male Suicide Rate by Age/b<>") +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 45, hjust = 1)) 
+  #scale_y_continuous(limits = c(0, max(male_suicides$suicide_rate)), breaks = seq(0, max(male_suicides$suicide_rate), by = 100))
+
+p2 <- ggplot(female_suicides, aes(x = Age, y = suicide_rate, fill = Age)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("#e08214", "#fdb863", "#fee0b6", "#b2abd2", "#8073ac", "#542788")) +
+  xlab("Age") + ylab("Female Suicide Rate") +
+  ggtitle("<b>Female Suicide Rate by Age</b>") +
+  scale_y_continuous(limits = c(0, max(male_suicides$suicide_rate)), expand = c(0, 0)) +
+  #scale_y_continuous(limits = c(0, max(male_suicides$suicide_rate)), breaks = seq(0, max(male_suicides$suicide_rate), by = 100)) +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 45, hjust = 1))
+
+grid.arrange(p1,p2,ncol = 2, widths = c(5,5))
+
+
+
+```
+
+Regardless of the year, the data shows that male suicides are approximately three times higher than female suicides. Furthermore, the suicide rate rises with age, indicating that age is a significant factor in determining suicide risk. This highlights the importance of targeted interventions to address the unique challenges that different demographic groups face, particularly older men who are at the highest risk of suicide. Understanding the relationship between gender, age, and suicide rate can aid in the development of effective prevention strategies and aid in the reduction of suicides.
+
+
+
+
+### 4. How does age group and gender impact the number of suicides over time in a specific country ( United States )?
+
+```{r SECTION 1 Question 4, echo=FALSE}
+#age group wise suicide count, for male and female, over the years in the United States
+#grouping the data by year and age and gender
+suicides_by_year_age_gender <- Suicide_rates %>% 
+  filter(Country == "United States") %>%
+  group_by(Year, Age, Gender) %>% 
+  summarize(Total_Suicides = sum(Number_of_Suicides))
+#plotting a stacked area chart
+#colors <- c("honeydew2", "lavender", "palevioletred1", "salmon1","powderblue","slategray1")
+plot5 <- ggplot(suicides_by_year_age_gender, aes(x = Year, y = Total_Suicides, fill = Age)) +
+  geom_area() +
+  #scale_x_sqrt() +
+  facet_grid(Gender ~ ., scales = "free_y") +
+  ggtitle("<b>Suicide Trends by Age & Gender over years in United States</b>") +
+  xlab("Year") +
+  ylab("Total Number of Suicides") +
+  scale_fill_brewer(palette = "PuOr") +
+  theme(legend.position = "right")
+ggplotly(plot5)
+
+```
+
+The trend in suicides in the United States reveals a persistent upward trajectory over the years and a correlation with age, with higher rates of suicide as age increases.
+
+
+
+### 5. Do different generations exhibit variations in their suicide rates?
+
+```{r SECTION 1 Question 5, echo=FALSE}
+
+df_generation <- Suicide_rates %>% group_by(Year, Generation) %>% summarise(suicides_no = sum(Number_of_Suicides), population = sum(Population))
+
+df_generation_reset <- df_generation %>% select(-group_cols()) %>% ungroup()
+
+df_generation_reset$suicide_rate <- df_generation_reset$suicides_no * 100 / df_generation_reset$population
+
+ggplotly(
+ggplot(df_generation_reset, aes(x=Year, y=suicides_no, fill=Generation)) +
+geom_col() +
+scale_x_discrete(limits = rev(levels(df_generation_reset$Year)), expand = c(0,0)) +
+scale_fill_manual(values = c("#b35806", "#e08214", "#fdb863", "#b2abd2", "#8073ac", "#542788")) +
+xlab("Year") + ylab("Suicides") +
+ggtitle("<b>Suicides by Generation</b>") +
+theme(plot.title = element_text(hjust = 0.5)) +
+scale_x_continuous(limits = c(min(df_generation_reset$Year), max(df_generation_reset$Year)), breaks=seq(min(df_generation_reset$Year), max(df_generation_reset$Year), by=5)) +
+scale_y_continuous(labels=scales::comma)
+)
+
+
+#heatmap of average suicide rate by year and generation
+
+#Aggregate the data to calculate the average suicide rate by year and generation
+agg_data <- Suicide_rates %>%
+  group_by(Year, Generation) %>%
+  summarize(avg_suicide_rate = mean(Suicide_Rate))
+
+library(viridis)
+PuOr_palette <- c("#b35806", "#e08214", "#fdb863", "#d8daeb", "#b2abd2", "#8073ac", "#542788","#2d004b")
+#Plot the heatmap
+plot6 <- ggplot(agg_data, aes(x = Year, y = Generation, fill = avg_suicide_rate)) +
+  geom_tile() +
+   scale_fill_gradientn(colors = PuOr_palette) + 
+  theme_classic() +
+  ggtitle("<b>Heatmap of Average Suicide Rate by Year/Generation</b>") +
+  xlab("Year") +
+  ylab("Generation") +
+  theme(axis.text.y = element_text(angle = 0, vjust = 0.5, hjust = 1)) 
+
+ggplotly(plot6)
+
+```
+
+Stacked Bar Chart
+The generations play a significant role in the suicide cases, and each generation has contributed to the suicide cases over the years. The G. I Generation and Generation Z have been the prominent generations with a high number of suicides reported. The Boomers generation has made a significant count in the suicide cases, but a year of 2010 has been observed with no suicide cases reported for this generation.
+
+
+Heatmap
+Suicide rates vary across different generations, as seen in the heatmap. G.I Generation has a higher intensity compared to other generations, but every generation has contributed to the overall suicide cases. Notably, G.I Generation and Generation Z have gaps in their suicide cases during certain periods.
+
+
+
+### 6. How do countries differ in their suicide rates and demographics of those affected?
+
+```{r SECTION 1 Question 6, echo=FALSE}
+library(treemap)
+
+# Calculate the number of suicides per country
+suicides_per_country <- Suicide_rates %>%
+  group_by(Country) %>%
+  summarise(Number_of_Suicides = sum(Number_of_Suicides))
+
+
+# Create the treemap chart
+tm <- treemap(suicides_per_country, index = "Country", vSize = "Number_of_Suicides", vColor = "Number_of_Suicides", type = "value",
+              palette = "Purples", title = "Number of Suicides per Country")
+
+
+
+#install.packages("wordcloud")
+library(wordcloud)
+#install.packages("RColorBrewer")
+library(RColorBrewer)
+#install.packages("wordcloud2")
+library(wordcloud2)
+
+# Group the data by country and get the sum of suicides
+country_suicides <- Suicide_rates %>%
+  group_by(Country) %>%
+  summarize(suicide_rate = mean(Suicide_Rate)) %>%
+  arrange(desc(suicide_rate))
+
+# Create a word cloud using the country names and Total_no_of_Suicides
+p11 <- wordcloud(words = country_suicides$Country, freq = country_suicides$suicide_rate, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=-0.7, scale=c(2, 0.75),
+          colors=brewer.pal(9, "Oranges")[5:9])
+
+```
+
+The graph presents the highest number of suicides by country. Japan, the Russian Federation, and the United States have the most reported cases.
+
+
+
+### 7. What are the Top and Bottom 10 Countries with the highest and lowest Average Suicide Rate?
+
+```{r SECTION 1 Question 7, echo=FALSE}
+#donut chart showing the top 10 countries with the highest average suicide rate.
+library(dplyr)
+library(plotly)
+
+suicides_per_country <- Suicide_rates %>%
+group_by(Country) %>%
+summarise(suicide_rate = mean(Suicide_Rate)) %>%
+arrange(desc(suicide_rate))
+
+Top_10_Suicidal_Countries <- head(suicides_per_country,10)
+
+
+df_mean_suicide_rate <- Top_10_Suicidal_Countries %>%
+  mutate(Mean_Suicide_Rate = round(suicide_rate, 2))
+
+# Subset the top 10 countries with the highest mean Suicide Rate
+df_top_10_countries <- head(df_mean_suicide_rate, 10)
+colours <- c("#800000", "#FF7F50", "#E9967A", "#FFA07A", "#DDA0DD", "#BA55D3", "#C71585", "#800080", "#8B4513", "#542788", "#2d004b")
+# Plot a donut chart of the top 10 countries with the highest mean Suicide Rate
+p <- plot_ly(df_top_10_countries, labels = df_top_10_countries$Country,
+             text = paste("Country: ", df_top_10_countries$Country, "<br>",
+                          "Average Suicide rate: ", df_top_10_countries$Mean_Suicide_Rate, "<br>"),
+             values = df_top_10_countries$Mean_Suicide_Rate, 
+             type = 'pie', hole = 0.25, marker = list(colors = colours),
+             textposition = "inside")
+p1 <- p %>% layout(title = "<b>Top 10 Countries with the highest Average Suicide Rate</b>", xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE), yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+
+
+
+#donut chart showing the top 10 countries with the highest average suicide rate.
+library(dplyr)
+library(plotly)
+
+suicides_per_country <- Suicide_rates %>%
+group_by(Country) %>%
+summarise(suicide_rate = mean(Suicide_Rate)) %>%
+arrange(suicide_rate)
+
+Bottom_10_Suicidal_Countries <- head(suicides_per_country,10)
+
+
+df_mean_suicide_rate <- Bottom_10_Suicidal_Countries %>%
+  mutate(Mean_Suicide_Rate = round(suicide_rate, 2))
+
+# Subset the top 10 countries with the highest mean Suicide Rate
+df_bottom_10_countries <- head(df_mean_suicide_rate, 10)
+colours <- c("#800000", "#FF7F50", "#E9967A", "#FFA07A", "#DDA0DD", "#BA55D3", "#C71585", "#800080", "#8B4513", "#542788", "#2d004b")
+# Plot a donut chart of the top 10 countries with the highest mean Suicide Rate
+p <- plot_ly(df_bottom_10_countries, labels = df_bottom_10_countries$Country,
+             text = paste("Country: ", df_bottom_10_countries$Country, "<br>",
+                          "Average Suicide rate: ", df_bottom_10_countries$Mean_Suicide_Rate, "<br>"),
+             values = df_bottom_10_countries$Mean_Suicide_Rate, 
+             type = 'pie', hole = 0.25, marker = list(colors = colours),
+             textposition = "inside")
+p2 <- p %>% layout(title = "<b>Bottom 10 Countries with the lowest Average Suicide Rate</b>", xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE), yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+
+p1
+p2
+```
+
+The top 10 countries with the highest average suicide rates were analyzed using a donut chart, with Lithuana having the highest rate at 12.8%. Sri Lanka followed closely at 11.2% and the Russian Federation at 11%. These results showcase the severity of the issue in these countries and the need for a closer examination of the underlying factors contributing to the high suicide rates.
+
+On the other hand, the bottom 10 countries with the lowest average suicide rates were also analyzed using a donut chart. Interestingly, there were no recorded suicide rates in countries such as Dominica and Saint Kitts. Jamaica, on the other hand, had the lowest average suicide rate among these countries. These insights highlight the need for continued monitoring of suicide trends and the factors contributing to them, even in countries with low suicide rates, to ensure the well-being of the population.
+
+
+
+### 8. Suicide rates for the top 10 countries
+ 
+```{r SECTION 1 Question 8, echo=FALSE}
+library(ggplot2)
+
+# Create a data frame of the top 10 countries with the highest suicide rate
+df_total <- aggregate(Suicide_rates$Number_of_Suicides, by=list(Suicide_rates$Country), sum)
+colnames(df_total) <- c("Country", "Total_Suicides")
+df_total <- df_total[order(df_total$Total_Suicides, decreasing = TRUE),]
+top_10_countries <- as.vector(df_total[1:10,]$Country)
+
+# Subset the data to include only the top 10 countries
+df_subset <- subset(Suicide_rates, Country %in% top_10_countries)
+
+
+# Plot the horizontal box plot
+p <- ggplot(df_subset, aes(x = Country, y = Suicide_Rate, fill = Country)) +
+  geom_boxplot(outlier.shape = NA) +
+  coord_flip() +
+  scale_y_continuous(limits = c(0, max(df_subset$Suicide_Rate, na.rm = TRUE) * 1.1), expand = c(0,0)) +
+  labs(x = "", y = "Suicide Rate") +
+  scale_fill_manual(values = c("#800000", "#FF7F50", "#E9967A", "#FFA07A", "#DDA0DD", "#BA55D3", "#C71585", "#800080", "#8B4513", "#542788", "#2d004b")) +
+  ggtitle("<b>Suicide Rate of Top 10 Countries</b>") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14))
+ggplotly(p)
+```
+
+The box plot of suicide rates for the top 10 countries reveals that the distribution of suicide rates is quite varied. Republic of Korea has a high number of outliers, indicating that there is a significant amount of variability in the suicide rates for this country. On the other hand, the Russian Federation has the highest median suicide rate, with a median of 19.13. This highlights that the suicide rate in this country is significantly higher compared to other countries. On the other hand, the suicide rate is the lowest in Brazil, with a median of 2.80. This suggests that the suicide rate in Brazil is relatively low compared to other countries.
+
+
+### 9. What is the pattern of suicide rates by age and gender in the top 6 countries with the highest suicide rates?
+
+``` {r SECTION 1 Question 9, echo=FALSE}
+# Load the data
+daf <- Suicide_rates
+
+# Group the data by country and calculate the mean suicide rate
+df_grouped <- daf %>%
+  group_by(Country) %>%
+  summarize(mean_suicide_rate = mean(Suicide_Rate)) %>%
+  arrange(desc(mean_suicide_rate))
+
+# Filter the data to include only the top 5 countries with highest mean suicide rate
+df_filtered <- daf %>%
+  filter(Country %in% df_grouped$Country[1:9])
+
+# Create an interactive bar chart
+p <- df_filtered %>%
+  ggplot(aes(x = Age, y = Number_of_Suicides, fill = Gender)) +
+  geom_col() +
+  facet_wrap(~ Country, scales = "free_y") +
+  scale_fill_manual(values = c("#fdb863", "#8073ac")) +
+  labs(x = "Age Group", y = "Number of Suicides", fill = "Gender") +
+  ggtitle("<b>Suicide by Age/Gender for Top 9 Countries</b>") +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+ggplotly(p)
+
+```
+
+The suicide rates vary greatly across countries. In some countries, suicide is a leading cause of death, while in others it is much less prevalent. The countries with the highest number of suicides include Belarus, Hungary, Kazakhstan, Lithuania, Russia, and Sri Lanka, with a higher number of male suicides compared to female. The age group with the highest number of suicides is 35 to 54 years. In Kazakhstan, the highest suicide rate is in the 5 to 14 years age group, while in Sri Lanka, females in the same age group have a higher rate of suicides than males.
+
+
+### 10. What is the pattern of suicide rates by age and gender in the bottom 6 countries with the lowest suicide rates?
+
+```{r SECTION 1 Question 10, echo=FALSE}
+daf <- Suicide_rates
+
+# Group the data by country and calculate the mean suicide rate
+df_grouped <- daf %>%
+  group_by(Country) %>%
+  summarize(mean_suicide_rate = mean(Suicide_Rate)) %>%
+  arrange(mean_suicide_rate)
+
+# Filter the data to include only the top 5 countries with highest mean suicide rate
+df_filtered <- daf %>%
+  filter(Country %in% df_grouped$Country[1:9])
+
+# Create an interactive bar chart
+p <- df_filtered %>%
+  ggplot(aes(x = Age, y = Number_of_Suicides, fill = Gender)) +
+  geom_col() +
+  facet_wrap(~ Country, scales = "free_y") +
+  scale_fill_manual(values = c("#fdb863", "#8073ac")) +
+  labs(x = "Age Group", y = "Number of Suicides", fill = "Gender") +
+  ggtitle("<b>Suicide by Age/Gender for Bottom 9 Countries</b>") +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+ggplotly(p)
+
+```
+ 
+On the other hand, countries with the lowest suicide rates include Antigua and Barbuda, Cabo Verde, Dominica, Grenada, Macau, Maldives, Oman, Saint Kitts and Nevis, and San Marino. Saint Kitts and Dominica have zero reported suicides, while Oman and San Marino have no reported suicides among females. Maldives also has zero suicides reported in the 55 to 74 years age group. The population size and demographic factors play a significant role in determining the suicide rate of a country.
+
+
+
+
+
+
+## Section 2: Economic Analysis based on Suicide Cases
+
+In this section, we will examine the relationship between the suicide rate and economic factors, such as GDP per capita and HDI. We can create scatter plots to show these relationships, allowing us to visualize any correlations between these variables and the suicide rate. This will help us better understand the impact that a country's standard of living and human development have on its suicide rate and provide valuable information for developing interventions to prevent suicide.
+
+
+### 1. What is the distribution of GDP per capita for the top 10 countries?
+
+```{r SECTION 2 Question 1, echo=FALSE}
+library(plotly)
+
+# Subset the data to include only the top 10 countries with the highest GDP per capita
+df_gdp <- aggregate(Suicide_rates$GDP_per_Capita, by=list(Suicide_rates$Country), mean)
+colnames(df_gdp) <- c("Country", "GDP_per_Capita")
+df_gdp <- df_gdp[order(df_gdp$GDP_per_Capita, decreasing = TRUE),]
+df_gdp_10 <- head(df_gdp, 10)
+
+
+
+df_gdp_10$Country <- factor(df_gdp_10$Country, levels = df_gdp_10$Country)
+
+p <- df_gdp_10 %>% 
+  plot_ly(labels = ~Country, values = ~GDP_per_Capita, type = 'pie', 
+          marker = list(colors = c("#800000", "#FF7F50", "#E9967A", "#FFA07A", "#DDA0DD", "#BA55D3", "#C71585", "#800080", "#8B4513", "#542788", "#2d004b"))) %>% 
+  layout(title = "<b>Distribution of GDP per capita for the top 10 countries</b>",
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         legend = list(title = "Countries"))
+
+p
+```
+
+The analysis shows a significant difference in the distribution of GDP per capita among the top 10 countries. Luxembourg stands out as the country with the highest GDP per capita, while the United States has the lowest GDP per capita among the top 10 countries. This indicates that there is a wide range of economic development among these countries, and that the level of economic prosperity can greatly impact the standard of living and overall well-being of the population.
+
+
+
+### 2. What is the correlation between GDP per capita and suicide rates in different countries?
+Considering top 10 countries with highest Suicide Rate
+
+```{r SECTION 2 Question 2, echo=FALSE}
+library(ggplot2)
+library(ggrepel)
+
+suicides_per_country <- Suicide_rates %>%
+group_by(Country) %>%
+summarise(suicide_rate = mean(Suicide_Rate), GDP = mean(GDP_per_Capita)) %>%
+arrange(desc(suicide_rate))
+
+Top_10_Suicidal_Countries <- head(suicides_per_country,10)
+
+ggplotly(
+ggplot(Top_10_Suicidal_Countries, aes(x = GDP, y = suicide_rate, color = Country, label = Country)) +
+geom_point(size = 4) +
+geom_smooth(method = "lm", se = FALSE) +
+labs(title = "<b>GDPperCapita V/S Suicide Rate (Top 10 countries)</b>",
+x = "GDP per capita",
+y = "Suicide rate") +
+scale_color_manual(values = c("#800000", "#FF7F50", "#E9967A", "#FFA07A", "#DDA0DD", "#BA55D3", "#C71585", "#800080", "#8B4513", "#542788", "#2d004b")) +
+geom_text_repel(size = 3, segment.color = "grey50", segment.alpha = 0.7) +
+theme(plot.title = element_text(hjust = 0.5),
+legend.position = "bottom")
+)
+
+```
+
+There appears to be a correlation between the GDP per capita of a country and its suicide rate. Countries with higher GDP per capita tend to have lower suicide rates, such as Slovenia. On the other hand, countries with lower GDP per capita, such as Sri Lanka, tend to have moderate to high suicide rates. An interesting exception is seen in Ukraine, which has the lowest suicide rate but also the lowest GDP per capita. 
+
+
+
+Considering Bottom 10 countries with least Suicide Rate
+
+```{r SECTION 2 Question 2.1, echo=FALSE}
+library(ggplot2)
+library(ggrepel)
+
+suicides_per_country <- Suicide_rates %>%
+group_by(Country) %>%
+summarise(suicide_rate = mean(Suicide_Rate), GDP = mean(GDP_per_Capita)) %>%
+arrange((suicide_rate))
+
+Bottom_10_Suicidal_Countries <- head(suicides_per_country,10)
+
+ggplotly(
+ggplot(Bottom_10_Suicidal_Countries, aes(x = GDP, y = suicide_rate, color = Country, label = Country)) +
+geom_point(size = 4) +
+geom_smooth(method = "lm", se = FALSE) +
+labs(title = "<b>GDPperCapita V/S Suicide Rate (Bottom 10 countries)</b>",
+x = "GDP per capita",
+y = "Suicide rate") +
+scale_color_manual(values = c("#800000", "#FF7F50", "#E9967A", "#FFA07A", "#DDA0DD", "#BA55D3", "#C71585", "#800080", "#8B4513", "#542788", "#2d004b")) +
+geom_text_repel(size = 3, segment.color = "grey50", segment.alpha = 0.7) +
+theme(plot.title = element_text(hjust = 0.5),
+legend.position = "bottom")
+)
+
+```
+The correlation between a country's GDP per capita and its suicide rate is apparent. Dominica has both low GDP per capita and low suicide rate, while United Arab Emirates has high GDP per capita but also high suicide rate. Oman presents a moderate balance between the two variables.
+
+
+
+Based on the above insights, it can be concluded that there is not a clear relationship between the GDP per capita and the suicide rates of countries. Some countries have high GDP per capita and low suicide rates, such as Slovenia and the United Kingdom. Other countries have low GDP per capita and high suicide rates. There are also countries that fall in between with moderate rates of both variables, such as Oman. This indicates that there may be other factors that play a role in determining suicide rates, and that a high GDP per capita does not necessarily equate to low suicide rates and vice versa.
+
+
+
+### 3. What is the correlation between GDP per capita and Total Number of Suicides in different countries?
+
+Considering Top 10 countries with highest Suicides
+
+```{r SECTION 2 Question 3, echo=FALSE}
+
+country_suicides <- Suicide_rates %>%
+  group_by(Country) %>%
+  summarize(Total_no_of_Suicides = sum(Number_of_Suicides))
+
+country_suicides_sorted <- country_suicides %>%
+  arrange(desc(Total_no_of_Suicides)) %>%
+  head(10)
+
+data_frame_mod <- Suicide_rates[Suicide_rates$Country %in% c("Russian Federation", "United States", "Japan","France", "Ukraine","Germany","Republic of Korea","Brazil","Poland","United Kingdom"),]
+
+df <- data_frame_mod %>%
+  group_by(Country, Year, GDP_per_Capita) %>%
+  summarise(Total = sum(Number_of_Suicides))
+
+library(gganimate)
+
+# create a plotly object
+p <- plot_ly(df, x = ~GDP_per_Capita, y = ~Total, color = ~Country, size = ~Total,
+             colors = c("#800000", "#FF7F50", "#E9967A", "#FFA07A", "#DDA0DD", "#BA55D3", "#C71585", "#800080", "#8B4513", "#542788", "#2d004b"),
+             text = paste("Country: ", df$Country, "<br>",
+                          "GDP per Capita: ", df$GDP_per_Capita, "<br>",
+                          "Total Number of Suicides: ", df$Total),
+             mode = "markers", animation = list(frame = ~Year, fromcurrent = TRUE,
+                                                 transition = list(duration = 500)))
+
+# update the layout
+p <- layout(p, xaxis = list(title = "GDP per capita"), yaxis = list(title = "Total Number of Suicides"),
+            hovermode = "closest", title = "<b>GDPperCapita V/S Total Number of Suicides(Top 10 Countries)</b>")
+
+# show the plot
+p
+
+```
+It can be concluded from the above observations that there is no clear pattern that can be drawn between the GDP per capita and the number of suicides in a country. In some countries, like Brazil, Poland, and South Korea, there is an increase in the number of suicides with an increase in GDP per capita, while in other countries, such as France, Germany, Russia, Ukraine, and the United States, the number of suicides decreases with an increase in GDP per capita. 
+
+
+
+Considering Bottom 10 countries with least Suicides
+
+```{r SECTION 2 Question 3.1, echo=FALSE}
+country_suicides <- Suicide_rates %>%
+  group_by(Country) %>%
+  summarize(Total_no_of_Suicides = sum(Number_of_Suicides))
+
+country_suicides_sorted <- country_suicides %>%
+  arrange(Total_no_of_Suicides) %>%
+  head(10)
+
+data_frame_mod <- Suicide_rates[Suicide_rates$Country %in% c("Dominica", "Saint Kitts and Nevis", "San Marino","Antigua and Barbuda", "Maldives","Macau","Oman","Grenada","Cabo Verde","Kiribati"),]
+
+df <- data_frame_mod %>%
+  group_by(Country, Year, GDP_per_Capita) %>%
+  summarise(Total = sum(Number_of_Suicides))
+
+library(gganimate)
+
+# create a plotly object
+p <- plot_ly(df, x = ~GDP_per_Capita, y = ~Total, color = ~Country, size = ~Total,
+             colors = c("#800000", "#FF7F50", "#E9967A", "#FFA07A", "#DDA0DD", "#BA55D3", "#C71585", "#800080", "#8B4513", "#542788", "#2d004b"),
+             text = paste("Country: ", df$Country, "<br>",
+                          "GDP per Capita: ", df$GDP_per_Capita, "<br>",
+                          "Total Number of Suicides: ", df$Total),
+             mode = "markers", animation = list(frame = ~Year, fromcurrent = TRUE,
+                                                 transition = list(duration = 500)))
+
+# update the layout
+p <- layout(p, xaxis = list(title = "GDP per capita"), yaxis = list(title = "Total Number of Suicides"),
+            hovermode = "closest", title = "<b>GDPperCapita V/S Total Number of Suicides(Bottom 10 Countries)</b>")
+
+# show the plot
+p
+```
+Due to the scattered data points and limited information on suicides and GDP per capita for the countries, it is difficult to draw any meaningful conclusions from this information.
+
+
+The relationship between GDP per capita and the total number of suicides is complex and can vary greatly between countries. In some cases, an increase in GDP per capita can lead to a decrease in suicides, while in other countries an increase in GDP per capita can lead to an increase in suicides. The relationship between these two variables is not clear and likely depends on various social, cultural, and economic factors. Thus, it is important to consider multiple factors and not rely solely on GDP per capita when examining the issue of suicide.
+
+
+
+
+### 4. What are the top 10 countries with the highest GDP per capita on a yearly basis?
+
+```{r SECTION 2 Question 4, echo=FALSE}
+library(ggplot2)
+df_gdp <- aggregate(Suicide_rates$GDP_per_Capita, by=list(Suicide_rates$Country, Suicide_rates$Year), mean)
+colnames(df_gdp) <- c("Country", "Year", "GDP_per_Capita")
+
+# Create a list of the top 10 countries with the highest suicide rate
+df_total <- aggregate(Suicide_rates$Number_of_Suicides, by=list(Suicide_rates$Country), sum)
+colnames(df_total) <- c("Country", "Total_Suicides")
+df_total <- df_total[order(df_total$Total_Suicides, decreasing = TRUE),]
+top_10_countries <- as.vector(df_total[1:10,]$Country)
+
+# Plot GDP per capita for the top 10 countries with the highest suicide rate
+df_gdp_10 <- subset(df_gdp, Country %in% top_10_countries)
+
+p <- ggplot(df_gdp_10, aes(x=Year, y=GDP_per_Capita, color=Country)) +
+  geom_line() +
+  labs(x="Year", y="GDP per Capita") +
+  ggtitle("<b>Top10 Countries with highest GDP Per Capita (Yearly)</b>") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14)) +
+  theme(axis.text.x = element_text(size = 12), axis.text.y = element_text(size = 12)) +
+  theme(axis.title.x = element_text(size = 14, face = "bold"), axis.title.y = element_text(size = 14, face = "bold"))
+
+ggplotly(p)
+
+
+
+library(ggplot2)
+df_gdp <- aggregate(Suicide_rates$GDP_per_Capita, by=list(Suicide_rates$Country, Suicide_rates$Year), mean)
+colnames(df_gdp) <- c("Country", "Year", "GDP_per_Capita")
+
+#Create a list of the top 10 countries with the highest suicide rate
+df_total <- aggregate(Suicide_rates$Number_of_Suicides, by=list(Suicide_rates$Country), sum)
+colnames(df_total) <- c("Country", "Total_Suicides")
+df_total <- df_total[order(df_total$Total_Suicides, decreasing = TRUE),]
+top_10_countries <- as.vector(df_total[1:10,]$Country)
+
+#Plot Ratio of Suicides per Year for the top 10 countries with the highest suicide rate
+df_suicides_10 <- subset(Suicide_rates, Country %in% top_10_countries)
+df_suicides_per_year <- aggregate(df_suicides_10$Number_of_Suicides, by=list(df_suicides_10$Country, df_suicides_10$Year), sum)
+colnames(df_suicides_per_year) <- c("Country", "Year", "Suicides_per_Year")
+
+p <- ggplot(df_suicides_per_year, aes(x=Year, y=Suicides_per_Year, color=Country)) +
+geom_line() +
+labs(x="Year", y="Suicides per Year") +
+ggtitle("<b>Top10 Countries with highest Suicides (Yearly)</b>") +
+theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14)) +
+theme(axis.text.x = element_text(size = 12), axis.text.y = element_text(size = 12)) +
+theme(axis.title.x = element_text(size = 14, face = "bold"), axis.title.y = element_text(size = 14, face = "bold"))
+
+ggplotly(p)
+```
+GDP_per_Capita VS Year : Through this plot, it is apparent that the evolution of GDP per capita differs greatly among countries. In the case of Ukraine, the GDP per capita remains largely unchanged and remains at a low level. On the other hand, the United States experiences a significant increase in GDP per capita over time, with a noticeable leap at certain points. Meanwhile, Japan's GDP per capita exhibits a fluctuating pattern, with alternating periods of increase and decrease.
+
+Suicides VS Year : This plot provides a visual representation of the trend of suicides in different countries over time. In the case of Japan, there is a noticeable decrease in suicides from 1986 to 1997, followed by an increase from 1998 onwards. Meanwhile, in the United States, the trend seems to indicate a steady increase in suicides starting from 2004. Overall, the plot highlights the fluctuations in the number of suicides in different countries and allows for a better understanding of the trends and patterns in each country.
+
+In conclusion, the evolution of GDP per capita and suicide rate differs greatly among countries, as shown in the plots. While the GDP per capita in the United States has increased significantly over time, Japan's GDP per capita has exhibited a fluctuating pattern with periods of increase and decrease. Similarly, the suicide rate in Japan has fluctuated over time, with a noticeable drop in suicides from 1986 to 1997 and an increase again from 1998 onwards. In contrast, the suicide rate in the United States has had a noticeable incline from 2004 onwards. These insights highlight the complexity of economic and social factors that contribute to the well-being of individuals and societies.
+
+
+## Correlation Analysis (Integrating the above Sections)
+
+
+
+
+Correlation Matrix
+
+```{r Correlated Matrix, echo=FALSE}
+# Load necessary library
+library(tidyverse)
+library(ggplot2)
+library(graphics)
+library(reshape2)
+
+# Select the columns for the correlation matrix
+suicide_rates_correlation <- Suicide_rates[, c("Year", "Number_of_Suicides", "Population", "Suicide_Rate", "GDP_per_Year", "GDP_per_Capita")]
+
+# Calculate the correlation matrix
+correlation_matrix <- cor(suicide_rates_correlation)
+
+# Calculate the correlation matrix
+cor_matrix <- cor(correlation_matrix)
+
+
+melted_cormat <- melt(cor_matrix)
+
+ggplot(data = melted_cormat, aes(x=Var1, y=Var2, fill=value)) +
+geom_tile() +
+geom_text(aes(label = round(value, 2)), color = "white", size = 3) +
+scale_fill_gradient(high ="#542788", low = "#fdb863") +
+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+labs(title = "<b>Correlation Heatmap</b>", x = "", y = "")
+```
+The correlation heatmap provides an insightful representation of the relationship between different numerical variables in the dataset such as year, number of suicides, population, suicide rate, GDP per Year, and GDP per Capita. Through this visualization, it became evident that there is a strong positive correlation between population and number of suicides, which is reflected in the high correlation with GDP per Year. Additionally, the heatmap highlights a clear negative correlation between the number of suicides and the year, indicating a decline in suicide cases over time.
+
+
+# CONCLUSION
+
+In our analysis, we have primarily focused on exploring the impact of demographic factors on the trend of suicides across various countries (more focus on Section 1). Through the creation of visualizations using demographic information from the dataset, we aimed to shed light on how factors such as age, gender, etc. significantly influence the rate of suicides.
+
+This project aimed at exploring the various factors that contribute to suicide cases and the suicide rate. The first significant insight that the project has discovered is that age and generation play a crucial role in determining the suicide cases. The number of suicides increases with age, and the trend of suicides has been observed to increase over time. Additionally, the majority of suicides are committed by males, who account for nearly 70% of all suicides across different age groups.
+
+The second insight that the project has discovered is that the suicide rate is closely tied to the total population of a country. A country with a low population and a relatively high number of suicides will have a higher suicide rate compared to a country with a larger population but fewer suicides. For example, even though both the USA and Maldives have the same number of suicides, the suicide rate in Maldives would be higher since it has a smaller population.
+
+The third key learning from this project is the relationship between a country's GDP and the suicide rate. The top 10 countries in terms of suicide rate and GDP per capita were analyzed in this project, and it was observed that the countries with higher GDP per capita had a relatively lower suicide rate.
+
+In conclusion, the project has explored several critical factors that contribute to suicide cases and the suicide rate. By utilizing various visualizations, the project has provided insights into the trend of suicides over the years, the contribution of different age groups, the relationship between population and suicide rate, and the connection between GDP per capita and suicide rate. These insights can help policymakers and healthcare professionals to better understand the factors that contribute to suicides and to design effective intervention strategies to reduce suicide rates in the future.
+
+
+
+# REFERENCES
+Dataset - Suicide Rates Overview 1985 to 2016 - "https://www.kaggle.com/datasets/russellyates88/suicide-rates-overview-1985-to-2016"
+Visualization - http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html
+Colour Pallette - https://earlglynn.github.io/RNotes/package/RColorBrewer/index.html
+
