@@ -115,7 +115,9 @@ The analysis shows a significant difference in the distribution of GDP per capit
 <img width="890" alt="Screenshot 2025-02-02 at 12 10 14 PM" src="https://github.com/user-attachments/assets/88e961c3-487b-4786-bda9-fb9cefcd5f91" />
 
 There appears to be a correlation between the GDP per capita of a country and its suicide rate. Countries with higher GDP per capita tend to have lower suicide rates, such as Slovenia. On the other hand, countries with lower GDP per capita, such as Sri Lanka, tend to have moderate to high suicide rates. An interesting exception is seen in Ukraine, which has the lowest suicide rate but also the lowest GDP per capita.
+
 <img width="890" alt="Screenshot 2025-02-02 at 12 10 40 PM" src="https://github.com/user-attachments/assets/6e9f01a0-d023-4ac9-8341-de20fc3d93a9" />
+
 The correlation between a country’s GDP per capita and its suicide rate is apparent. Dominica has both low GDP per capita and low suicide rate, while United Arab Emirates has high GDP per capita but also high suicide rate. Oman presents a moderate balance between the two variables.
 
 Based on the above insights, it can be concluded that there is not a clear relationship between the GDP per capita and the suicide rates of countries. Some countries have high GDP per capita and low suicide rates, such as Slovenia and the United Kingdom. Other countries have low GDP per capita and high suicide rates. There are also countries that fall in between with moderate rates of both variables, such as Oman. This indicates that there may be other factors that play a role in determining suicide rates, and that a high GDP per capita does not necessarily equate to low suicide rates and vice versa.
@@ -123,6 +125,7 @@ Based on the above insights, it can be concluded that there is not a clear relat
 <img width="900" alt="Screenshot 2025-02-02 at 12 11 03 PM" src="https://github.com/user-attachments/assets/3627fae7-9fb8-492c-a113-85eac0342311" />
 
 It can be concluded from the above observations that there is no clear pattern that can be drawn between the GDP per capita and the number of suicides in a country. In some countries, like Brazil, Poland, and South Korea, there is an increase in the number of suicides with an increase in GDP per capita, while in other countries, such as France, Germany, Russia, Ukraine, and the United States, the number of suicides decreases with an increase in GDP per capita.
+
 <img width="900" alt="Screenshot 2025-02-02 at 12 11 23 PM" src="https://github.com/user-attachments/assets/a4890ffc-efd1-4089-ac8b-f20889ff6601" />
 
 Due to the scattered data points and limited information on suicides and GDP per capita for the countries, it is difficult to draw any meaningful conclusions from this information.
