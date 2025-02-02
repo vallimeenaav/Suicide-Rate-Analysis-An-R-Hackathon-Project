@@ -6,7 +6,8 @@ Suicide is a critical global health issue that affects millions of people across
 
 ## 🎯 Objectives of the Analysis
 
-✅ Explore the trends in suicide rates across different regions and demographics. \n
+✅ Explore the trends in suicide rates across different regions and demographics.
+
 ✅ Analyze the impact of economic indicators (GDP, unemployment, etc.) on suicide rates.
 ✅ Identify age and gender disparities in suicide rates.
 ✅ Visualize global suicide patterns using ggplot2.
